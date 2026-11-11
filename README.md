@@ -216,8 +216,10 @@ passed to build scripts.
 
 ## Toolchains
 
-The image carries JDK 17 and 21, Node.js, Bun, and the Android SDK (platform
-and build tools set by build arguments in the [Dockerfile](Dockerfile)).
+The image carries JDK 17 and 21, Node.js, Bun, and the Android SDK (platforms
+36 and 37 with their build tools; the lists are build arguments in the
+[Dockerfile](Dockerfile)). Gradle downloads other SDK components on demand,
+but into the container, so they are fetched again after it is recreated.
 A new toolchain or version means rebuilding the image. The image is built for
 `linux/amd64`, because the Android build tools are x86-64 only.
 

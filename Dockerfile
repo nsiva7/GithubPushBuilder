@@ -17,8 +17,10 @@ FROM ubuntu:24.04
 ARG NODE_VERSION=26.13.1
 ARG BUN_VERSION=latest
 ARG ANDROID_CMDLINE_TOOLS=13114758
-ARG ANDROID_PLATFORM=android-36
-ARG ANDROID_BUILD_TOOLS=36.0.0
+# Space-separated lists. Gradle downloads anything else a build asks for, but
+# into the container, so it is lost when the container is recreated.
+ARG ANDROID_PLATFORMS="android-36 android-37.0"
+ARG ANDROID_BUILD_TOOLS="36.0.0 36.1.0 37.0.0"
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -67,7 +69,11 @@ RUN set -eu; \
     unzip -q /tmp/clt.zip -d "${ANDROID_HOME}/cmdline-tools"; rm /tmp/clt.zip; \
     mv "${ANDROID_HOME}/cmdline-tools/cmdline-tools" "${ANDROID_HOME}/cmdline-tools/latest"; \
     yes | sdkmanager --licenses > /dev/null; \
-    sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+    packages="platform-tools"; \
+    for p in ${ANDROID_PLATFORMS}; do packages="${packages} platforms;${p}"; done; \
+    for b in ${ANDROID_BUILD_TOOLS}; do packages="${packages} build-tools;${b}"; done; \
+    sdkmanager ${packages}; \
+    sdkmanager --list_installed
 
 COPY --from=build /out/githubpushbuilder /usr/local/bin/githubpushbuilder
 
