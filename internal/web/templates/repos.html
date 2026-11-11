@@ -1,0 +1,38 @@
+{{define "content"}}
+<div class="head"><h1>Repos</h1></div>
+
+<section class="card">
+  {{if .D.Repos}}
+  <div class="scroll"><table>
+    <thead><tr><th>Repo</th><th>Branches that build</th><th>Webhook</th></tr></thead>
+    <tbody>
+    {{range .D.Repos}}
+    <tr>
+      <td><a href="/repos/{{.ID}}">{{.FullName}}</a></td>
+      <td>{{join .Branches ", "}}</td>
+      <td>{{if .Enabled}}<span class="badge success">on</span>{{else}}<span class="badge">off</span>{{end}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table></div>
+  {{else}}
+  <p class="muted">No repos yet. Only pushes to the repos and branches listed here start builds.</p>
+  {{end}}
+</section>
+
+<section class="card">
+  <h2>Add a repo</h2>
+  <form method="post" action="/repos" class="fields">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Repo
+      <input type="text" name="full_name" placeholder="owner/name" required autocomplete="off">
+    </label>
+    <label>Branches that build
+      <input type="text" name="branches" placeholder="main, release" required autocomplete="off">
+      <span class="hint">Exact branch names, separated by commas or spaces.</span>
+    </label>
+    <div><button class="primary">Add repo</button></div>
+    <p class="muted small">A webhook secret is generated and shown once on the next page, with the steps to add the webhook on GitHub.</p>
+  </form>
+</section>
+{{end}}

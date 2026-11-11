@@ -1,0 +1,24 @@
+services:
+  githubpushbuilder:
+    image: nsiva77/githubpushbuilder:latest
+    # To build the image yourself instead of pulling it, uncomment:
+    # build: .
+    platform: linux/amd64
+    restart: unless-stopped
+    # Bound to localhost: put a reverse proxy with TLS in front (see README).
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      GPB_BASE_URL: https://builds.example.com
+      GPB_TRUST_PROXY: "1"
+      # First start only. Without it a password is generated and printed in the logs.
+      # GPB_ADMIN_PASSWORD: ${GPB_ADMIN_PASSWORD}
+    volumes:
+      - data:/data
+      # Deploy keys, for repos cloned over SSH:
+      # - ./ssh:/home/builder/.ssh:ro
+    # Time for running builds to stop; they are re-queued on the next start.
+    stop_grace_period: 30s
+
+volumes:
+  data:

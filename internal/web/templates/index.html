@@ -1,0 +1,106 @@
+{{define "content"}}
+<section class="card">
+  <h2>Run a build</h2>
+  {{if .D.Targets}}
+  <form method="post" action="/run" class="row">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Repo and branch
+      <select name="target">
+        {{range .D.Targets}}<option value="{{.RepoID}}|{{.Branch}}">{{.Repo}} · {{.Branch}}</option>{{end}}
+      </select>
+    </label>
+    <label>Commit SHA (optional)
+      <input type="text" name="sha" class="mono" placeholder="Empty = head of the branch" pattern="[0-9a-fA-F]{40}|[0-9a-fA-F]{64}" title="Full commit SHA" autocomplete="off">
+    </label>
+    <button class="primary">Run</button>
+  </form>
+  {{else}}
+  <p class="muted">No repos are registered yet. <a href="/repos">Add a repo</a> to start building.</p>
+  {{end}}
+</section>
+
+<div id="live-active">{{template "active" .}}</div>
+
+<section class="card">
+  <div class="bar">
+    <h2 class="grow">History</h2>
+    {{if .D.Repos}}
+    <form method="get" action="/" class="row">
+      <label><span class="muted">Repo</span>
+        <select name="repo" id="repo-filter">
+          <option value="">All repos</option>
+          {{$f := .D.RepoFilter}}
+          {{range .D.Repos}}<option value="{{.ID}}" {{if eq .ID $f}}selected{{end}}>{{.FullName}}</option>{{end}}
+        </select>
+      </label>
+      <noscript><button>Filter</button></noscript>
+    </form>
+    {{end}}
+  </div>
+  <div id="live-history">{{template "history" .}}</div>
+</section>
+{{end}}
+
+{{/* The parts of the page that refresh on their own. */}}
+{{define "live"}}
+<div id="live-active">{{template "active" .}}</div>
+<div id="live-history">{{template "history" .}}</div>
+{{end}}
+
+{{define "active"}}
+<section class="card">
+  <h2>Running <span class="count">{{len .D.Running}} of {{.D.MaxParallel}}</span></h2>
+  {{if .D.Running}}{{template "buildrows" (rows .D.Running .CSRF "Started" true)}}
+  {{else}}<p class="muted">Nothing is building right now.</p>{{end}}
+</section>
+<section class="card">
+  <h2>Queue <span class="count">{{len .D.Queued}}</span></h2>
+  {{if .D.Queued}}{{template "buildrows" (rows .D.Queued .CSRF "Queued" true)}}
+  {{else}}<p class="muted">The queue is empty.</p>{{end}}
+</section>
+{{end}}
+
+{{define "history"}}
+  {{if .D.History}}{{template "buildrows" (rows .D.History .CSRF "Finished" false)}}
+  {{else}}<p class="muted">No finished builds{{if .D.RepoFilter}} for this repo{{end}} yet.</p>{{end}}
+  {{if gt .D.Pages 1}}
+  <div class="pager small">
+    {{if gt .D.Page 1}}<a href="/?page={{add .D.Page -1}}{{if .D.RepoFilter}}&amp;repo={{.D.RepoFilter}}{{end}}">← Newer</a>{{end}}
+    <span class="muted">Page {{.D.Page}} of {{.D.Pages}}</span>
+    {{if lt .D.Page .D.Pages}}<a href="/?page={{add .D.Page 1}}{{if .D.RepoFilter}}&amp;repo={{.D.RepoFilter}}{{end}}">Older →</a>{{end}}
+  </div>
+  {{end}}
+{{end}}
+
+{{define "script"}}
+<script nonce="{{.Nonce}}">
+(function () {
+  var filter = document.getElementById('repo-filter');
+  if (filter) filter.addEventListener('change', function () { filter.form.submit(); });
+
+  // Keep the running, queue and history tables current without reloading the page.
+  function refresh() {
+    if (document.hidden) return;
+    var url = new URL(location.href);
+    url.searchParams.set('fragment', '1');
+    fetch(url, {headers: {Accept: 'text/html'}, credentials: 'same-origin'}).then(function (res) {
+      if (res.status === 401) { location.reload(); return null; }
+      return res.ok ? res.text() : null;
+    }).then(function (html) {
+      if (!html) return;
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      ['live-active', 'live-history'].forEach(function (id) {
+        var fresh = doc.getElementById(id), old = document.getElementById(id);
+        if (fresh && old && fresh.innerHTML !== old.dataset.raw) {
+          old.dataset.raw = fresh.innerHTML;
+          old.innerHTML = fresh.innerHTML;
+          localTimes(old);
+        }
+      });
+    }).catch(function () {});
+  }
+  setInterval(refresh, 4000);
+  document.addEventListener('visibilitychange', refresh);
+})();
+</script>
+{{end}}

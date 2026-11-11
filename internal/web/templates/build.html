@@ -1,0 +1,94 @@
+{{define "content"}}
+{{$b := .D.Build}}
+<div class="head">
+  <h1>Build #{{$b.ID}}</h1>
+  <span class="badge big {{$b.Status}}">{{label $b.Status}}</span>
+  <span class="grow"></span>
+  {{if $b.Active}}
+  <form method="post" action="/builds/{{$b.ID}}/cancel" class="inline" data-confirm="Cancel build #{{$b.ID}}?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}"><button class="danger">Cancel build</button>
+  </form>
+  {{else}}
+  <form method="post" action="/builds/{{$b.ID}}/retry" class="inline">
+    <input type="hidden" name="csrf" value="{{.CSRF}}"><button>Retry</button>
+  </form>
+  {{end}}
+</div>
+
+<section class="card">
+  <dl class="meta">
+    {{if $b.Message}}<dt>Result</dt><dd>{{$b.Message}}</dd>{{end}}
+    <dt>Repo</dt><dd><a href="/repos/{{.D.RepoID}}">{{$b.Repo}}</a></dd>
+    <dt>Branch</dt><dd>{{$b.Branch}}</dd>
+    <dt>Commit</dt><dd>
+      {{if $b.CommitSHA}}
+        {{if .D.CommitURL}}<a class="mono" href="{{.D.CommitURL}}" rel="noopener noreferrer" target="_blank">{{$b.CommitSHA}}</a>
+        {{else}}<span class="mono">{{$b.CommitSHA}}</span>{{end}}
+        {{if $b.CommitMessage}}<br>{{$b.CommitMessage}}{{end}}
+        {{if $b.Author}}<span class="muted">— {{$b.Author}}</span>{{end}}
+      {{else}}<span class="muted">Head of the branch, resolved at checkout</span>{{end}}
+    </dd>
+    <dt>Trigger</dt><dd>{{$b.Trigger}}{{if $b.RetryOf}} of <a href="/builds/{{$b.RetryOf}}">#{{$b.RetryOf}}</a>{{end}}</dd>
+    <dt>Queued</dt><dd>{{ts $b.CreatedAt}}</dd>
+    <dt>Started</dt><dd>{{ts $b.StartedAt}}</dd>
+    <dt>Finished</dt><dd>{{ts $b.FinishedAt}}</dd>
+    <dt>Duration</dt><dd>{{dur $b}}</dd>
+  </dl>
+</section>
+
+<section class="card">
+  <h2>Artifacts <span class="count">{{len .D.Artifacts}}</span></h2>
+  {{if .D.Artifacts}}
+  <div class="scroll"><table>
+    <thead><tr><th>File</th><th class="num">Size</th><th>SHA-256</th></tr></thead>
+    <tbody>
+    {{range .D.Artifacts}}
+    <tr>
+      <td><a href="/builds/{{$b.ID}}/artifacts/{{.Path}}">{{.Path}}</a></td>
+      <td class="num">{{bytes .Size}}</td>
+      <td class="mono sha256">{{.SHA256}}</td>
+    </tr>
+    {{end}}
+    </tbody>
+  </table></div>
+  {{else if $b.ArtifactsPruned}}
+  <p class="muted">The artifacts of this build were deleted by the retention setting.</p>
+  {{else if $b.Active}}
+  <p class="muted">Artifacts appear here when the build finishes.</p>
+  {{else}}
+  <p class="muted">This build produced no artifacts.</p>
+  {{end}}
+</section>
+
+<section class="card">
+  <div class="bar">
+    <h2 class="grow">Log</h2>
+    <label class="check small"><input type="checkbox" id="follow" checked> Follow</label>
+    <a class="small" href="/builds/{{$b.ID}}/log?download=1">Download full log</a>
+  </div>
+  <pre class="log" id="log" data-build="{{$b.ID}}" data-status="{{$b.Status}}" tabindex="0"
+    data-empty="{{if eq $b.Status "queued"}}Waiting in the queue…{{else if $b.Active}}Starting…{{else}}This build has no log.{{end}}"></pre>
+</section>
+{{end}}
+
+{{define "script"}}
+<script nonce="{{.Nonce}}">
+(function () {
+  var pre = document.getElementById('log'), follow = document.getElementById('follow');
+  var ansi = /\x1b\[[0-9;?]*[ -\/]*[@-~]/g;
+  var es = new EventSource('/builds/' + pre.dataset.build + '/events');
+  es.onmessage = function (e) {
+    var text = JSON.parse(e.data).replace(ansi, '').replace(/\r\n?/g, '\n');
+    pre.appendChild(document.createTextNode(text));
+    if (follow.checked) pre.scrollTop = pre.scrollHeight;
+  };
+  es.addEventListener('reset', function () { pre.textContent = ''; });
+  // When the state changes, reload to refresh the header, buttons and artifacts.
+  es.addEventListener('status', function (e) {
+    if (e.data !== pre.dataset.status) { es.close(); location.reload(); }
+  });
+  es.addEventListener('done', function () { es.close(); });
+  pre.addEventListener('wheel', function (e) { if (e.deltaY < 0) follow.checked = false; }, {passive: true});
+})();
+</script>
+{{end}}

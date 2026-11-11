@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="head"><h1>Settings</h1></div>
+
+<section class="card">
+  <form method="post" action="/settings" class="fields">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <h2>Queue</h2>
+    <label>Parallel builds
+      <input type="number" name="max_parallel_builds" min="1" max="64" value="{{.D.MaxParallel}}" required>
+      <span class="hint">How many builds run at once. Two builds of the same repo and branch never run together. Android builds need a lot of memory each.</span>
+    </label>
+    <label>Waiting pushes kept per branch
+      <input type="number" name="max_waiting_per_branch" min="1" max="100" value="{{.D.MaxWaiting}}" required>
+      <span class="hint">When more pushes arrive for a branch than this, the oldest waiting one is marked superseded. Manual runs and retries are never superseded.</span>
+    </label>
+    <label>Default timeout in minutes
+      <input type="number" name="default_timeout_minutes" min="1" max="1440" value="{{.D.DefaultTimeout}}" required>
+      <span class="hint">A repo can override this on its own page.</span>
+    </label>
+    <label>Builds kept per branch
+      <input type="number" name="retention_builds" min="1" max="10000" value="{{.D.Retention}}" required>
+      <span class="hint">Artifacts of older builds are deleted. History and logs are kept.</span>
+    </label>
+
+    <h2>Links and notifications</h2>
+    <label>Public URL of this dashboard
+      <input type="url" name="base_url" value="{{.D.BaseURL}}" placeholder="https://builds.example.com">
+      <span class="hint">Used for links in Slack messages and GitHub commit statuses.</span>
+    </label>
+    <label>Slack incoming webhook URL
+      <input type="password" name="slack_webhook_url" placeholder="{{if .D.HasSlack}}Saved — type to replace{{else}}https://hooks.slack.com/services/…{{end}}" autocomplete="off">
+      <span class="hint">A message is sent when a build succeeds, fails or times out.</span>
+    </label>
+    {{if .D.HasSlack}}<label class="check"><input type="checkbox" name="clear_slack"> Remove the saved Slack webhook</label>{{end}}
+    <label>GitHub token
+      <input type="password" name="github_token" placeholder="{{if .D.HasToken}}Saved — type to replace{{else}}Not set{{end}}" autocomplete="off">
+      <span class="hint">Used to clone private repos and set commit statuses, for repos without their own token.</span>
+    </label>
+    {{if .D.HasToken}}<label class="check"><input type="checkbox" name="clear_token"> Remove the saved GitHub token</label>{{end}}
+    <div><button class="primary">Save settings</button></div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Admin password</h2>
+  <form method="post" action="/settings/password" class="fields">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Current password
+      <input type="password" name="current_password" autocomplete="current-password" required>
+    </label>
+    <label>New password
+      <input type="password" name="new_password" autocomplete="new-password" minlength="10" maxlength="72" required>
+      <span class="hint">At least 10 characters.</span>
+    </label>
+    <label>New password again
+      <input type="password" name="confirm_password" autocomplete="new-password" minlength="10" maxlength="72" required>
+    </label>
+    <div><button>Change password</button></div>
+  </form>
+</section>
+{{end}}

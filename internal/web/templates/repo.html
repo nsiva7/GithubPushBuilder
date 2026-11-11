@@ -1,0 +1,76 @@
+{{define "content"}}
+{{$r := .D.Repo}}
+<div class="head">
+  <h1>{{$r.FullName}}</h1>
+  {{if $r.Enabled}}<span class="badge success">webhook on</span>{{else}}<span class="badge">webhook off</span>{{end}}
+</div>
+
+{{if .D.NewSecret}}
+<div class="once">
+  <p><strong>Webhook secret — copy it now, it is not shown again.</strong></p>
+  <p><code>{{.D.NewSecret}}</code></p>
+  <p class="small">On GitHub, open the repo's Settings → Webhooks → Add webhook and enter:</p>
+  <dl class="meta small">
+    <dt>Payload URL</dt><dd><code>{{.D.HookURL}}</code></dd>
+    <dt>Content type</dt><dd><code>application/json</code></dd>
+    <dt>Secret</dt><dd>the value above</dd>
+    <dt>Events</dt><dd>Just the push event</dd>
+  </dl>
+</div>
+{{end}}
+
+<section class="card">
+  <h2>Build settings</h2>
+  <form method="post" action="/repos/{{$r.ID}}" class="fields">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Branches that build
+      <input type="text" name="branches" value="{{join $r.Branches ", "}}" required autocomplete="off">
+      <span class="hint">Exact branch names, separated by commas or spaces. Pushes to other branches are ignored.</span>
+    </label>
+    <label>Timeout in minutes
+      <input type="number" name="timeout_minutes" min="1" max="1440" value="{{if $r.TimeoutMinutes}}{{$r.TimeoutMinutes}}{{end}}" placeholder="Default ({{.D.DefaultTimeout}})">
+    </label>
+    <label>Clone URL
+      <input type="text" name="clone_url" value="{{$r.CloneURL}}" placeholder="https://github.com/{{$r.FullName}}.git" autocomplete="off">
+      <span class="hint">Leave empty for GitHub over HTTPS. Use <code>git@github.com:{{$r.FullName}}.git</code> to clone with a deploy key.</span>
+    </label>
+    <label>GitHub token for this repo
+      <input type="password" name="token" placeholder="{{if $r.Token}}Saved — type to replace{{else}}Uses the token from Settings{{end}}" autocomplete="off">
+      <span class="hint">Fine-grained token with read access to Contents, and read/write to Commit statuses if statuses are on.</span>
+    </label>
+    {{if $r.Token}}<label class="check"><input type="checkbox" name="clear_token"> Remove the saved token for this repo</label>{{end}}
+    <label class="check"><input type="checkbox" name="commit_status" {{if $r.CommitStatus}}checked{{end}}> Set the GitHub commit status (pending, success, failure)</label>
+    <label class="check"><input type="checkbox" name="enabled" {{if $r.Enabled}}checked{{end}}> Build on push. When off, webhooks for this repo are ignored; manual runs still work.</label>
+    <div><button class="primary">Save</button></div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Scripts</h2>
+  <p>The repo must contain <code>{{.D.RepoScript}}</code>. It runs from the repo root and copies its outputs into <code>$ARTIFACTS_DIR</code>.</p>
+  <p class="muted">To give this repo its own pre or post script, put <code>pre.sh</code> or <code>post.sh</code> in <code>{{.D.ScriptDir}}</code>. Otherwise the global scripts are used.</p>
+</section>
+
+<section class="card">
+  <h2>Webhook</h2>
+  <dl class="meta">
+    <dt>Payload URL</dt><dd><code>{{.D.HookURL}}</code></dd>
+    <dt>Content type</dt><dd><code>application/json</code></dd>
+    <dt>Events</dt><dd>Just the push event</dd>
+  </dl>
+  <p></p>
+  <form method="post" action="/repos/{{$r.ID}}/secret" data-confirm="Generate a new webhook secret? GitHub deliveries fail until you update the secret there.">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button>Generate a new secret</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Remove</h2>
+  <p class="muted">Deletes the repo with its build history, logs, artifacts and git cache. This can't be undone.</p>
+  <form method="post" action="/repos/{{$r.ID}}/delete" data-confirm="Remove {{$r.FullName}} and all its builds, logs and artifacts?">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <button class="danger">Remove repo</button>
+  </form>
+</section>
+{{end}}

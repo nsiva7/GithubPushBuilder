@@ -1,0 +1,13 @@
+{{define "content"}}
+<div class="login">
+  <h1>{{.Service}}</h1>
+  <div class="card">
+    <form method="post" action="/login" class="fields">
+      <label>Admin password
+        <input type="password" name="password" autocomplete="current-password" required autofocus>
+      </label>
+      <div><button class="primary">Sign in</button></div>
+    </form>
+  </div>
+</div>
+{{end}}
