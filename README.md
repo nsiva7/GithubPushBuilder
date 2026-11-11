@@ -63,9 +63,37 @@ Or with plain Docker:
 docker run -d --name githubpushbuilder --restart unless-stopped -p 127.0.0.1:8080:8080 -v githubpushbuilder-data:/data -e GPB_BASE_URL=https://builds.example.com -e GPB_TRUST_PROXY=1 nsiva77/githubpushbuilder:latest
 ```
 
-On the first start an admin password is generated and printed in the logs
-(or set `GPB_ADMIN_PASSWORD` before the first start). Sign in and change it
-under **Settings**.
+### Admin password
+
+On the first start an admin password is generated and printed once in the
+container log. To see it:
+
+```bash
+docker logs githubpushbuilder 2>&1 | grep -A1 'Generated one'
+```
+
+The second line it prints ends with the password. Sign in with it and change
+it under **Settings**. To choose the password yourself instead, set
+`GPB_ADMIN_PASSWORD` before the first start.
+
+The log belongs to the container, so the line is gone once the container has
+been removed and created again (the password itself is kept on the data
+volume). If you can no longer find it, or forgot it, set a new one. This asks
+for the new password (at least 10 characters) and signs out every session:
+
+```bash
+docker exec -it githubpushbuilder githubpushbuilder set-password
+```
+
+With Docker Compose the same two commands are
+`docker compose logs githubpushbuilder | grep -A1 'Generated one'` and
+`docker compose exec githubpushbuilder githubpushbuilder set-password`.
+
+Sign in through the HTTPS address of your reverse proxy. The session cookie is
+only sent over HTTPS, so a login over plain `http://<ip>:8080` is accepted but
+does not stick.
+
+### Reverse proxy
 
 The container listens on `127.0.0.1:8080`. Put a reverse proxy with TLS in
 front of it. With Caddy this is enough:
@@ -169,11 +197,7 @@ Everything that changes often is in the dashboard. The container itself reads:
 | `GPB_REPO_SCRIPT` | `.our_container_dir/our_container_script.sh` | Script path inside a repo |
 | `GPB_GITHUB_API_URL` | `https://api.github.com` | For GitHub Enterprise |
 
-Lost the password:
-
-```bash
-docker compose exec githubpushbuilder githubpushbuilder set-password
-```
+To find or reset the admin password, see [Admin password](#admin-password).
 
 ### Access to private repos
 
