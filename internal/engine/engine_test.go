@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -427,5 +429,47 @@ func TestLogMasking(t *testing.T) {
 	want := "pass=*** ok\nabc stays, *** goes\npartial\n"
 	if string(got) != want {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestAccessHint(t *testing.T) {
+	const prompt = "fatal: could not read Username for 'https://github.com': terminal prompts disabled\n"
+	cases := []struct {
+		name, output string
+		hasToken     bool
+		want         string
+	}{
+		{"private repo, no token", prompt, false, "no GitHub token is saved"},
+		{"token rejected", prompt, true, "rejected the saved GitHub token"},
+		{"token without access to the repo", "remote: Repository not found.\nfatal: repository 'https://github.com/acme/app.git/' not found\n", true, "cannot see acme/app"},
+		{"token without contents permission", "remote: Write access to repository not granted.\nfatal: unable to access 'https://github.com/acme/app.git/': The requested URL returned error: 403\n", true, "read access to Contents"},
+		{"deploy key refused", "git@github.com: Permission denied (publickey).\n", false, "deploy key"},
+		{"unrelated failure", "fatal: couldn't find remote ref refs/heads/gone\n", true, ""},
+	}
+	for _, c := range cases {
+		got := accessHint(c.output, c.hasToken, "acme/app")
+		if (c.want == "") != (got == "") || !strings.Contains(got, c.want) {
+			t.Errorf("%s: got %q, want it to mention %q", c.name, got, c.want)
+		}
+	}
+}
+
+// A checkout that fails for lack of access reports what to do, not the
+// internal detail about the commit.
+func TestCheckoutAccessFailureIsExplained(t *testing.T) {
+	f := newFixture(t, "true\n")
+	// An HTTPS remote that answers 401, like GitHub does for a private repo.
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("WWW-Authenticate", `Basic realm="GitHub"`)
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	t.Setenv("GIT_SSL_NO_VERIFY", "1")
+	f.repo.CloneURL = srv.URL + "/acme/app.git"
+	f.st.UpdateRepo(f.repo, f.repo.Branches)
+
+	b := f.finished(f.run(store.NewBuild{CommitSHA: strings.Repeat("a", 40), Trigger: store.TriggerWebhook}))
+	if b.Status != store.StatusFailed || !strings.Contains(b.Message, "no GitHub token is saved") {
+		t.Errorf("status %s, message %q\n%s", b.Status, b.Message, f.log(b.ID))
 	}
 }

@@ -110,8 +110,11 @@ func (e *Engine) checkout(ctx context.Context, lw io.Writer, repo store.Repo, b 
 	env := e.gitEnv(repo)
 	mirror := e.mirrorDir(repo)
 	ref := "refs/heads/" + b.Branch
+	// Keep a copy of what git prints, to turn an access problem into advice.
+	var said bytes.Buffer
+	out := io.MultiWriter(lw, &said)
 	git := func(dir string, args ...string) error {
-		return runProc(ctx, lw, dir, env, "git", args...)
+		return runProc(ctx, out, dir, env, "git", args...)
 	}
 	has := func(sha string) bool {
 		_, err := gitOut(ctx, env, mirror, "cat-file", "-e", sha+"^{commit}")
@@ -157,6 +160,9 @@ func (e *Engine) checkout(ctx context.Context, lw io.Writer, repo store.Repo, b 
 	}
 	lock.Unlock()
 	if err != nil {
+		if hint := accessHint(said.String(), e.token(repo) != "", repo.FullName); hint != "" {
+			return errors.New(hint)
+		}
 		return err
 	}
 
@@ -188,6 +194,41 @@ func (e *Engine) checkout(ctx context.Context, lw io.Writer, repo store.Repo, b 
 		}
 	}
 	return nil
+}
+
+// accessHint explains what to do when git's output shows the remote refused
+// access. It returns "" when the output is about something else.
+func accessHint(gitOutput string, hasToken bool, repo string) string {
+	has := func(parts ...string) bool {
+		for _, p := range parts {
+			if strings.Contains(gitOutput, p) {
+				return true
+			}
+		}
+		return false
+	}
+	const where = "under Settings, or on the repo's page for a token of its own"
+	switch {
+	case has("could not read Username", "Authentication failed", "Invalid username or token", "could not read Password"):
+		if !hasToken {
+			return "GitHub asked for a login and no GitHub token is saved. Add one " + where + ", then press Retry"
+		}
+		return "GitHub rejected the saved GitHub token. Check that it was pasted completely and has not expired, save it again " +
+			where + ", then press Retry"
+	case has("Repository not found", "repository not found"):
+		if !hasToken {
+			return "GitHub cannot find " + repo + " without a login. If the repo is private, add a GitHub token " + where
+		}
+		return "The saved GitHub token cannot see " + repo + ". Give the token access to this repo " +
+			"(fine-grained tokens: Repository access) and check the repo name"
+	case has("Write access to repository not granted", "The requested URL returned error: 403"):
+		return "The saved GitHub token is not allowed to read " + repo + ". It needs read access to Contents"
+	case has("Permission denied (publickey)", "Host key verification failed"):
+		return "The SSH login to the remote was refused. Check the deploy key mounted in /home/builder/.ssh and that it was added to " + repo
+	case has("Could not resolve host", "Failed to connect to", "Connection timed out"):
+		return "The remote could not be reached from the build server. Check its network and DNS"
+	}
+	return ""
 }
 
 func firstLine(s, fallback string) string {
