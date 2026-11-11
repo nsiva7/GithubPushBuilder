@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/nsiva7/GithubPushBuilder/actions/workflows/ci.yml/badge.svg)](https://github.com/nsiva7/GithubPushBuilder/actions/workflows/ci.yml)
 [![Docker pulls](https://img.shields.io/docker/pulls/nsiva77/githubpushbuilder)](https://hub.docker.com/r/nsiva77/githubpushbuilder)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 A small self-hosted build server in one Docker container. Push to GitHub (or
 merge a PR), and it runs the build script that lives in your repo, then keeps
@@ -253,3 +254,7 @@ prints a generated admin password on the first run.
 | `internal/notify` | Slack and GitHub commit status |
 | `internal/web` | Dashboard, login, live log stream |
 | `internal/defaults` | Starter pre and post scripts |
+
+## License
+
+[MIT](LICENSE)
