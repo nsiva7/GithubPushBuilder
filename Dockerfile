@@ -22,7 +22,7 @@ ARG ANDROID_BUILD_TOOLS=36.0.0
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      bash ca-certificates curl git git-lfs jq openssh-client tini unzip xz-utils zip \
+      bash ca-certificates curl git git-lfs jq libatomic1 openssh-client tini unzip xz-utils zip \
       openjdk-17-jdk-headless openjdk-21-jdk-headless \
  && rm -rf /var/lib/apt/lists/* \
  # Arch-independent JDK paths, so repo scripts can pick one: JAVA_HOME="$JAVA17_HOME"
