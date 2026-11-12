@@ -17,7 +17,7 @@ import (
 	"github.com/nsiva7/GithubPushBuilder/internal/store"
 )
 
-const repoScript = ".our_container_dir/our_container_script.sh"
+const repoScript = ".push_builder/script.sh"
 
 type fixture struct {
 	t      *testing.T

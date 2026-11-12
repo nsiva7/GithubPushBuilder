@@ -28,7 +28,7 @@ builds, and trigger or cancel builds.
 
 Names still to be chosen (placeholders used below):
 
-- Repo script path: `.our_container_dir/our_container_script.sh`
+- Repo script path: `.push_builder/script.sh`
 - Service/binary name: `GithubPushBuilder`
 
 ## 3. Build flow
@@ -44,11 +44,11 @@ Names still to be chosen (placeholders used below):
    `max_parallel_builds`.
 4. **Checkout** — clone or fetch the repo into a clean per-build workspace at
    the pushed commit SHA.
-5. **Check** — if `.our_container_dir/our_container_script.sh` is missing, fail
+5. **Check** — if `.push_builder/script.sh` is missing, fail
    the build immediately with a clear message.
 6. **Pre script (defined in container)** — shared setup: export secrets and
    keystore, set `ANDROID_HOME`, point Gradle at the cache directory.
-7. **Repo script** — run `.our_container_dir/our_container_script.sh` with the
+7. **Repo script** — run `.push_builder/script.sh` with the
    repo root as working directory.
 8. **Post script (defined in container)** — collect artifacts, send Slack
    notification, set GitHub commit status, clean the workspace.

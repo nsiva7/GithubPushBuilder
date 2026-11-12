@@ -32,7 +32,7 @@ on Docker Hub (`linux/amd64`). The design is in [docs/SPEC.md](docs/SPEC.md).
 1. GitHub sends a `push` event to `POST /hooks/github`. The signature, the repo
    and the branch are checked, duplicates are dropped, and the build is queued.
 2. The commit is checked out into a fresh workspace.
-3. If the repo has no `.our_container_dir/our_container_script.sh`, the build
+3. If the repo has no `.push_builder/script.sh`, the build
    fails right there with a message saying so.
 4. The **pre script** runs (`/data/scripts/pre.sh`).
 5. The **repo script** runs from the repo root.
@@ -113,8 +113,8 @@ Then, in the dashboard:
 3. On GitHub: repo **Settings → Webhooks → Add webhook**, with payload URL
    `https://builds.example.com/hooks/github`, content type `application/json`,
    the secret, and "Just the push event".
-4. Add `.our_container_dir/our_container_script.sh` to the repo
-   ([example](examples/our_container_script.sh)) and push.
+4. Add `.push_builder/script.sh` to the repo
+   ([example](examples/script.sh)) and push.
 
 ## The repo script
 
@@ -194,7 +194,7 @@ Everything that changes often is in the dashboard. The container itself reads:
 | `GPB_ADMIN_PASSWORD` | | Admin password for the first start only |
 | `GPB_TRUST_PROXY` | off | Set to `1` behind a reverse proxy, so login rate limiting sees the real client address |
 | `GPB_INSECURE_COOKIE` | off | Set to `1` to sign in over plain http. Local testing only |
-| `GPB_REPO_SCRIPT` | `.our_container_dir/our_container_script.sh` | Script path inside a repo |
+| `GPB_REPO_SCRIPT` | `.push_builder/script.sh` | Script path inside a repo |
 | `GPB_GITHUB_API_URL` | `https://api.github.com` | For GitHub Enterprise |
 
 To find or reset the admin password, see [Admin password](#admin-password).

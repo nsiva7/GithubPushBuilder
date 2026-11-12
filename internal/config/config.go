@@ -12,7 +12,7 @@ const (
 	ServiceName = "GithubPushBuilder"
 	// DefaultRepoScript is the only contract with a built repo. The spec lists
 	// the path as a placeholder; override with GPB_REPO_SCRIPT.
-	DefaultRepoScript = ".our_container_dir/our_container_script.sh"
+	DefaultRepoScript = ".push_builder/script.sh"
 )
 
 type Config struct {

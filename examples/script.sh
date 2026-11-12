@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Example build script for an Android app. Copy it into your repo as
-#   .our_container_dir/our_container_script.sh
+#   .push_builder/script.sh
 # It runs from the repo root. Its only job is to build and to copy what
 # should be downloadable into "$ARTIFACTS_DIR".
 set -euo pipefail
